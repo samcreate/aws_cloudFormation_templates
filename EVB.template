@@ -8,7 +8,7 @@
       "Type": "String",
       "Description" : "Name of an existing EC2 KeyPair to enable SSH access to the web server"
     },
-	"GitURL": {
+  "GitURL": {
       "Type": "String",
       "Description" : "Clone URL for the projects git Repo. Requires the repo to have the app located in a WWW dir."
     },
@@ -29,7 +29,7 @@
       "MaxValue": "65535",
       "Description" : "TCP/IP port for the web server"
     },
-	"DBName": {
+  "DBName": {
       "Default": "MyDatabase",
       "Description" : "MySQL database name",
       "Type": "String",
@@ -85,7 +85,7 @@
     }
   },
   "Resources": {
-	  "S3Bucket" : {
+    "S3Bucket" : {
           "Type" : "AWS::S3::Bucket",
           "Properties" : {
               "AccessControl" : "Private"
@@ -331,11 +331,11 @@
             "Fn::Join": [
               "",
               [
-               	"#!/bin/bash -ex\n",
-				"cd /tmp/\n",
-				"git clone ",{"Ref" : "GitURL" } ," app\n",
-				"cp -rf /tmp/app/www /var/\n"
-               	
+                "#!/bin/bash -ex\n",
+        "cd /tmp/\n",
+        "git clone ",{"Ref" : "GitURL" } ," app\n",
+        "cp -rf /tmp/app/www /var/\n"
+                
                ]
             ]
           }
@@ -348,6 +348,28 @@
         }
       },
       "Type": "AWS::AutoScaling::LaunchConfiguration"
+    },
+    "DBSecurityGroup": {
+      "Type": "AWS::RDS::DBSecurityGroup",
+      "Properties": {
+        "GroupDescription": "Grant database access to web server",
+        "DBSecurityGroupIngress": {
+          "EC2SecurityGroupName": { "Ref": "EC2SecurityGroup" }
+        }
+      }
+    },
+    "MySQLDatabase": {
+      "Type": "AWS::RDS::DBInstance",
+      "Properties": {
+        "Engine" : "MySQL",
+        "DBName" : { "Ref": "DBName" },
+        "MultiAZ" : { "Ref": "MultiAZDatabase" },
+        "MasterUsername": { "Ref": "DBUsername" },
+        "MasterUserPassword": { "Ref" : "DBPassword" },
+        "DBInstanceClass": { "Ref" : "DBInstanceClass" },
+        "DBSecurityGroups": [ { "Ref": "DBSecurityGroup" } ],
+        "AllocatedStorage": { "Ref" : "DBAllocatedStorage" }
+      }
     }
   },
 
@@ -393,13 +415,11 @@
     "S3BucketSecureURL" : {
         "Value" : { "Fn::Join" : [ "", [ "https://", { "Fn::GetAtt" : [ "S3Bucket", "DomainName" ] } ] ] },
         "Description" : "Name of S3 bucket to hold user uploaded files"
-    }
-	,
+    },
     "BeanstalkRepositoryPath" : {
         "Value" : "/www/",
         "Description" : "Directory in which to deploy from"
-    }
-	,
+    },
     "BeanstalkPort" : {
         "Value" : "22",
         "Description" : "Port in which to connect to"
@@ -411,6 +431,18 @@
     "git" : {
         "Value" : {"Ref" : "GitURL" },
         "Description" : "Location of GIT repo"
+    },
+    "DBEndPoint" : {
+        "Value" : { "Fn::GetAtt": [ "MySQLDatabase", "Endpoint.Address" ] },
+        "Description" : "MySql Host"
+    },
+    "DBUser" : {
+        "Value" :  { "Ref" : "DBUsername" },
+        "Description" : "MySql username"
+    },
+    "DBPass" : {
+        "Value" :  { "Ref" : "DBPassword" },
+        "Description" : "MySql username"
     }
   }
 }
